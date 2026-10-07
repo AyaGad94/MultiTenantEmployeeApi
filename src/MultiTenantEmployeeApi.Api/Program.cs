@@ -8,17 +8,25 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-var postgresConnectionString =
-    builder.Configuration.GetConnectionString("Postgres")
-    ?? throw new InvalidOperationException(
-        "Connection string 'Postgres' is not configured.");
+builder.Services.AddDbContext<EmployeeDbContext>(
+    (serviceProvider, options) =>
+    {
+        var configuration =
+            serviceProvider.GetRequiredService<IConfiguration>();
 
-builder.Services.AddDbContext<EmployeeDbContext>(options =>
-    options.UseNpgsql(postgresConnectionString));
+        var postgresConnectionString =
+            configuration.GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException(
+                "Connection string 'Postgres' is not configured.");
+
+        options.UseNpgsql(postgresConnectionString);
+    });
 
 builder.Services
     .AddOptions<TenantOptions>()
-    .Bind(builder.Configuration.GetSection(TenantOptions.SectionName))
+    .Bind(
+        builder.Configuration.GetSection(
+            TenantOptions.SectionName))
     .Validate(
         tenantOptions => tenantOptions.TenantAId != Guid.Empty,
         "Tenant A ID must be configured.")
@@ -37,10 +45,13 @@ builder.Services.AddScoped<ITenantContext>(
     serviceProvider =>
         serviceProvider.GetRequiredService<TenantContext>());
 
-builder.Services.AddMediatR(configuration =>
-    configuration.RegisterServicesFromAssemblyContaining<CreateEmployeeCommand>());
+builder.Services.AddMediatR(
+    configuration =>
+        configuration.RegisterServicesFromAssemblyContaining<
+            CreateEmployeeCommand>());
 
-builder.Services.AddValidatorsFromAssemblyContaining<CreateEmployeeValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<
+    CreateEmployeeValidator>();
 
 var app = builder.Build();
 
@@ -51,3 +62,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+public partial class Program
+{
+}
