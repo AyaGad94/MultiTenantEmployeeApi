@@ -1,12 +1,19 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microsoft.EntityFrameworkCore;
+using MultiTenantEmployeeApi.Api.Data;
 
-// Add services to the container.
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-var app = builder.Build();
+var postgresConnectionString =
+    builder.Configuration.GetConnectionString("Postgres")
+    ?? throw new InvalidOperationException(
+        "Connection string 'Postgres' is not configured.");
 
-// Configure the HTTP request pipeline.
+builder.Services.AddDbContext<EmployeeDbContext>(options =>
+    options.UseNpgsql(postgresConnectionString));
+
+var app = builder.Build();
 
 app.UseAuthorization();
 
