@@ -1,0 +1,107 @@
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using MultiTenantEmployeeApi.Api.Common.Responses;
+using MultiTenantEmployeeApi.Api.Common.Tenancy;
+using MultiTenantEmployeeApi.Api.Data;
+using MultiTenantEmployeeApi.Api.Entities;
+
+namespace MultiTenantEmployeeApi.Api.Features.Employees.List;
+
+public sealed class ListEmployeesQueryHandler
+    : IRequestHandler<ListEmployeesQuery, ListEmployeesResult>
+{
+    private readonly EmployeeDbContext _dbContext;
+    private readonly ITenantContext _tenantContext;
+
+    public ListEmployeesQueryHandler(
+        EmployeeDbContext dbContext,
+        ITenantContext tenantContext)
+    {
+        _dbContext = dbContext;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<ListEmployeesResult> Handle(
+        ListEmployeesQuery query,
+        CancellationToken cancellationToken)
+    {
+        var currentTenantId = _tenantContext.TenantId;
+
+        var employeeQuery = _dbContext.Employees
+            .AsNoTracking()
+            .Where(employee =>
+                employee.TenantId == currentTenantId &&
+                employee.DeletedAt == null);
+
+        if (!string.IsNullOrWhiteSpace(query.Department))
+        {
+            var requestedDepartment = query.Department.Trim();
+
+            employeeQuery = employeeQuery.Where(
+                employee =>
+                    employee.Department == requestedDepartment);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Status))
+        {
+            var requestedStatus = Enum.Parse<EmployeeStatus>(
+                query.Status.Trim(),
+                ignoreCase: true);
+
+            employeeQuery = employeeQuery.Where(
+                employee =>
+                    employee.Status == requestedStatus);
+        }
+
+        var totalCount = await employeeQuery.CountAsync(
+            cancellationToken);
+
+        var recordsToSkip =
+            (long)(query.Page - 1) * query.PageSize;
+
+        IReadOnlyList<ListEmployeeItem> employees;
+
+        if (recordsToSkip >= totalCount)
+        {
+            employees = Array.Empty<ListEmployeeItem>();
+        }
+        else
+        {
+            employees = await employeeQuery
+                .OrderBy(employee => employee.CreatedAt)
+                .ThenBy(employee => employee.Id)
+                .Skip((int)recordsToSkip)
+                .Take(query.PageSize)
+                .Select(employee => new ListEmployeeItem
+                {
+                    Id = employee.Id,
+                    FirstName = employee.FirstName,
+                    LastName = employee.LastName,
+                    Email = employee.Email,
+                    Department = employee.Department,
+                    Status =
+                        employee.Status == EmployeeStatus.Active
+                            ? "active"
+                            : "suspended"
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        var totalPages = totalCount == 0
+            ? 0
+            : (int)(((long)totalCount + query.PageSize - 1)
+                    / query.PageSize);
+
+        return new ListEmployeesResult
+        {
+            Employees = employees,
+            Pagination = new PaginationMetadata
+            {
+                Page = query.Page,
+                PageSize = query.PageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages
+            }
+        };
+    }
+}

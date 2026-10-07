@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using MultiTenantEmployeeApi.Api.Common.Responses;
 using MultiTenantEmployeeApi.Api.Features.Employees.Create;
+using MultiTenantEmployeeApi.Api.Features.Employees.List;
 
 namespace MultiTenantEmployeeApi.Api.Controllers;
 
@@ -11,14 +12,19 @@ namespace MultiTenantEmployeeApi.Api.Controllers;
 public sealed class EmployeesController : ControllerBase
 {
     private readonly ISender _sender;
-    private readonly IValidator<CreateEmployeeCommand> _createEmployeeValidator;
+    private readonly IValidator<CreateEmployeeCommand>
+        _createEmployeeValidator;
+    private readonly IValidator<ListEmployeesQuery>
+        _listEmployeesValidator;
 
     public EmployeesController(
         ISender sender,
-        IValidator<CreateEmployeeCommand> createEmployeeValidator)
+        IValidator<CreateEmployeeCommand> createEmployeeValidator,
+        IValidator<ListEmployeesQuery> listEmployeesValidator)
     {
         _sender = sender;
         _createEmployeeValidator = createEmployeeValidator;
+        _listEmployeesValidator = listEmployeesValidator;
     }
 
     [HttpPost]
@@ -63,5 +69,49 @@ public sealed class EmployeesController : ControllerBase
         return StatusCode(
             StatusCodes.Status201Created,
             ApiResponse<CreateEmployeeResponse>.Success(response));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? department = null,
+        [FromQuery] string? status = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new ListEmployeesQuery
+        {
+            Page = page,
+            PageSize = pageSize,
+            Department = department,
+            Status = status
+        };
+
+        var validationResult =
+            await _listEmployeesValidator.ValidateAsync(
+                query,
+                cancellationToken);
+
+        if (!validationResult.IsValid)
+        {
+            var validationErrorMessage = string.Join(
+                "; ",
+                validationResult.Errors.Select(
+                    validationFailure =>
+                        validationFailure.ErrorMessage));
+
+            return BadRequest(
+                ApiResponse<object?>.Failure(
+                    validationErrorMessage));
+        }
+
+        var listResult = await _sender.Send(
+            query,
+            cancellationToken);
+
+        return Ok(
+            ApiResponse<IReadOnlyList<ListEmployeeItem>>.Success(
+                listResult.Employees,
+                listResult.Pagination));
     }
 }
