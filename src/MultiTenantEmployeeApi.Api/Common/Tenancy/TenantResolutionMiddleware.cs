@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using MultiTenantEmployeeApi.Api.Common.Responses;
 
 namespace MultiTenantEmployeeApi.Api.Common.Tenancy;
 
@@ -42,7 +43,9 @@ public sealed class TenantResolutionMiddleware
 
         var tenantHeaderValue = tenantHeaderValues[0];
 
-        if (!Guid.TryParse(tenantHeaderValue, out var currentTenantId))
+        if (!Guid.TryParse(
+                tenantHeaderValue,
+                out var currentTenantId))
         {
             await WriteTenantErrorAsync(
                 httpContext,
@@ -80,8 +83,10 @@ public sealed class TenantResolutionMiddleware
     {
         httpContext.Response.StatusCode = statusCode;
 
-        await httpContext.Response.WriteAsync(
-            errorMessage,
+        var response = ApiResponse<object?>.Failure(errorMessage);
+
+        await httpContext.Response.WriteAsJsonAsync(
+            response,
             httpContext.RequestAborted);
     }
 }
