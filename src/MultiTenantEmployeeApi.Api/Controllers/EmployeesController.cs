@@ -5,6 +5,7 @@ using MultiTenantEmployeeApi.Api.Common.Responses;
 using MultiTenantEmployeeApi.Api.Features.Employees.Create;
 using MultiTenantEmployeeApi.Api.Features.Employees.List;
 using MultiTenantEmployeeApi.Api.Features.Employees.GetById;
+using MultiTenantEmployeeApi.Api.Features.Employees.Update;
 
 namespace MultiTenantEmployeeApi.Api.Controllers;
 
@@ -20,14 +21,19 @@ public sealed class EmployeesController : ControllerBase
     private readonly IValidator<ListEmployeesQuery>
         _listEmployeesValidator;
 
+    private readonly IValidator<UpdateEmployeeCommand>
+        _updateEmployeeValidator;
+
     public EmployeesController(
         ISender sender,
         IValidator<CreateEmployeeCommand> createEmployeeValidator,
-        IValidator<ListEmployeesQuery> listEmployeesValidator)
+        IValidator<ListEmployeesQuery> listEmployeesValidator,
+        IValidator<UpdateEmployeeCommand> updateEmployeeValidator)
     {
         _sender = sender;
         _createEmployeeValidator = createEmployeeValidator;
         _listEmployeesValidator = listEmployeesValidator;
+        _updateEmployeeValidator = updateEmployeeValidator;
     }
 
     [HttpPost]
@@ -139,5 +145,68 @@ public sealed class EmployeesController : ControllerBase
         return Ok(
             ApiResponse<EmployeeDetailsResponse>.Success(
                 employee));
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateEmployeeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateEmployeeCommand
+        {
+            EmployeeId = id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Department = request.Department,
+            Status = request.Status,
+            CustomData = request.CustomData
+        };
+
+        var validationResult =
+            await _updateEmployeeValidator.ValidateAsync(
+                command,
+                cancellationToken);
+
+        if (!validationResult.IsValid)
+        {
+            var validationErrorMessage = string.Join(
+                "; ",
+                validationResult.Errors.Select(
+                    validationFailure =>
+                        validationFailure.ErrorMessage));
+
+            return BadRequest(
+                ApiResponse<object?>.Failure(
+                    validationErrorMessage));
+        }
+
+        var updateResult = await _sender.Send(
+            command,
+            cancellationToken);
+
+        if (updateResult.EmployeeNotFound)
+        {
+            return NotFound(
+                ApiResponse<object?>.Failure(
+                    "Employee was not found."));
+        }
+
+        if (updateResult.EmailAlreadyExists)
+        {
+            return Conflict(
+                ApiResponse<object?>.Failure(
+                    "An employee with this email already exists for the current tenant."));
+        }
+
+        var response = new UpdateEmployeeResponse
+        {
+            Id = updateResult.EmployeeId!.Value
+        };
+
+        return Ok(
+            ApiResponse<UpdateEmployeeResponse>.Success(
+                response));
     }
 }
