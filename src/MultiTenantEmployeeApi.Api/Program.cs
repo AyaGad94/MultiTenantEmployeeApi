@@ -55,6 +55,14 @@ builder.Services.AddValidatorsFromAssemblyContaining<
 
 var app = builder.Build();
 
+using (var serviceScope = app.Services.CreateScope())
+{
+    var dbContext = serviceScope.ServiceProvider
+        .GetRequiredService<EmployeeDbContext>();
+
+    await dbContext.Database.MigrateAsync();
+}
+
 app.UseMiddleware<TenantResolutionMiddleware>();
 
 app.UseAuthorization();
