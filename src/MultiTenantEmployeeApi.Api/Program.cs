@@ -1,6 +1,8 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
+using MultiTenantEmployeeApi.Api.Features.Employees.Create;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,11 @@ builder.Services.AddScoped<TenantContext>();
 builder.Services.AddScoped<ITenantContext>(
     serviceProvider =>
         serviceProvider.GetRequiredService<TenantContext>());
+
+builder.Services.AddMediatR(configuration =>
+    configuration.RegisterServicesFromAssemblyContaining<CreateEmployeeCommand>());
+
+builder.Services.AddValidatorsFromAssemblyContaining<CreateEmployeeValidator>();
 
 var app = builder.Build();
 

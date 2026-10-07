@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MultiTenantEmployeeApi.Api.Entities;
@@ -54,7 +55,16 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.Property(employee => employee.CustomData)
             .HasColumnName("custom_data")
-            .HasColumnType("jsonb");
+            .HasColumnType("jsonb")
+            .HasConversion(
+                customData => customData == null
+                    ? null
+                    : customData.RootElement.GetRawText(),
+                storedJson => storedJson == null
+                    ? null
+                    : JsonDocument.Parse(
+                        storedJson,
+                        default(JsonDocumentOptions)));
 
         builder.Property(employee => employee.CreatedAt)
             .HasColumnName("created_at")
