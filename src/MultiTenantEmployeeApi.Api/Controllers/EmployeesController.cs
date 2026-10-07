@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MultiTenantEmployeeApi.Api.Common.Responses;
 using MultiTenantEmployeeApi.Api.Features.Employees.Create;
 using MultiTenantEmployeeApi.Api.Features.Employees.List;
+using MultiTenantEmployeeApi.Api.Features.Employees.GetById;
 
 namespace MultiTenantEmployeeApi.Api.Controllers;
 
@@ -12,8 +13,10 @@ namespace MultiTenantEmployeeApi.Api.Controllers;
 public sealed class EmployeesController : ControllerBase
 {
     private readonly ISender _sender;
+
     private readonly IValidator<CreateEmployeeCommand>
         _createEmployeeValidator;
+
     private readonly IValidator<ListEmployeesQuery>
         _listEmployeesValidator;
 
@@ -113,5 +116,28 @@ public sealed class EmployeesController : ControllerBase
             ApiResponse<IReadOnlyList<ListEmployeeItem>>.Success(
                 listResult.Employees,
                 listResult.Pagination));
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var query = new GetEmployeeByIdQuery(id);
+
+        var employee = await _sender.Send(
+            query,
+            cancellationToken);
+
+        if (employee is null)
+        {
+            return NotFound(
+                ApiResponse<object?>.Failure(
+                    "Employee was not found."));
+        }
+
+        return Ok(
+            ApiResponse<EmployeeDetailsResponse>.Success(
+                employee));
     }
 }
