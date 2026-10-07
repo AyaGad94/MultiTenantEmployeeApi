@@ -6,6 +6,7 @@ using MultiTenantEmployeeApi.Api.Features.Employees.Create;
 using MultiTenantEmployeeApi.Api.Features.Employees.List;
 using MultiTenantEmployeeApi.Api.Features.Employees.GetById;
 using MultiTenantEmployeeApi.Api.Features.Employees.Update;
+using MultiTenantEmployeeApi.Api.Features.Employees.Delete;
 
 namespace MultiTenantEmployeeApi.Api.Controllers;
 
@@ -207,6 +208,41 @@ public sealed class EmployeesController : ControllerBase
 
         return Ok(
             ApiResponse<UpdateEmployeeResponse>.Success(
+                response));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty)
+        {
+            return BadRequest(
+                ApiResponse<object?>.Failure(
+                    "Employee ID must be a valid non-empty UUID."));
+        }
+
+        var command = new DeleteEmployeeCommand(id);
+
+        var deletedEmployeeId = await _sender.Send(
+            command,
+            cancellationToken);
+
+        if (!deletedEmployeeId.HasValue)
+        {
+            return NotFound(
+                ApiResponse<object?>.Failure(
+                    "Employee was not found."));
+        }
+
+        var response = new DeleteEmployeeResponse
+        {
+            Id = deletedEmployeeId.Value
+        };
+
+        return Ok(
+            ApiResponse<DeleteEmployeeResponse>.Success(
                 response));
     }
 }
