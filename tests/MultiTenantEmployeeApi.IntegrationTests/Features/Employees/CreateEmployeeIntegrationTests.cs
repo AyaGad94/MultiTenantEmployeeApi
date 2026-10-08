@@ -1,12 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 using MultiTenantEmployeeApi.IntegrationTests.Infrastructure;
 using Testcontainers.PostgreSql;
-using MultiTenantEmployeeApi.Api.Common.Tenancy;
 
 namespace MultiTenantEmployeeApi.IntegrationTests.Features.Employees;
 
@@ -117,6 +119,71 @@ public sealed class CreateEmployeeIntegrationTests
             createdEmployee.Status);
 
         Assert.Null(createdEmployee.DeletedAt);
+    }
+
+    [Fact]
+    public async Task CreateEmployee_ReturnsStandardErrorEnvelope_WhenJsonIsMalformed()
+    {
+        const string malformedJson =
+            """
+            {
+              "firstName": "Bad",
+              "lastName":
+            }
+            """;
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "/api/v1/employees");
+
+        request.Headers.Add(
+            "X-Tenant-Id",
+            TenantAId.ToString());
+
+        request.Content = new StringContent(
+            malformedJson,
+            Encoding.UTF8,
+            "application/json");
+
+        var response = await _httpClient!.SendAsync(
+            request);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+
+        var responseBody =
+            await response.Content.ReadAsStringAsync();
+
+        using var responseDocument =
+            JsonDocument.Parse(responseBody);
+
+        var rootElement =
+            responseDocument.RootElement;
+
+        Assert.Equal(
+            JsonValueKind.Null,
+            rootElement.GetProperty("data").ValueKind);
+
+        Assert.Equal(
+            JsonValueKind.Null,
+            rootElement.GetProperty("pagination").ValueKind);
+
+        var errorMessage =
+            rootElement.GetProperty("error").GetString();
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(errorMessage));
+
+        Assert.False(
+            rootElement.TryGetProperty(
+                "type",
+                out _));
+
+        Assert.False(
+            rootElement.TryGetProperty(
+                "title",
+                out _));
     }
 
     public async Task DisposeAsync()

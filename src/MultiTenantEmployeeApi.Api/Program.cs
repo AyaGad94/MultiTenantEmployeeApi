@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc;
+using MultiTenantEmployeeApi.Api.Common.Responses;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
@@ -9,6 +11,37 @@ using MultiTenantEmployeeApi.Api.Data.Interceptors;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.Configure<ApiBehaviorOptions>(
+    options =>
+    {
+        options.InvalidModelStateResponseFactory =
+            actionContext =>
+            {
+                var errorMessages = actionContext.ModelState
+                    .Values
+                    .SelectMany(modelStateEntry =>
+                        modelStateEntry.Errors)
+                    .Select(modelError =>
+                        string.IsNullOrWhiteSpace(
+                            modelError.ErrorMessage)
+                            ? "The request body is invalid."
+                            : modelError.ErrorMessage)
+                    .Distinct()
+                    .ToArray();
+
+                var errorMessage =
+                    errorMessages.Length == 0
+                        ? "The request is invalid."
+                        : string.Join(
+                            "; ",
+                            errorMessages);
+
+                return new BadRequestObjectResult(
+                    ApiResponse<object?>.Failure(
+                        errorMessage));
+            };
+    });
 
 builder.Services.AddDbContext<EmployeeDbContext>(
     (serviceProvider, options) =>
@@ -22,6 +55,7 @@ builder.Services.AddDbContext<EmployeeDbContext>(
                 "Connection string 'Postgres' is not configured.");
 
         options.UseNpgsql(postgresConnectionString);
+
         options.AddInterceptors(
             serviceProvider.GetRequiredService<
                 TenantSessionConnectionInterceptor>());
@@ -61,8 +95,10 @@ builder.Services.AddValidatorsFromAssemblyContaining<
 builder.Services.AddSingleton<
     ICustomDataValidator,
     CustomDataValidator>();
+
 builder.Services.AddScoped<
     TenantSessionConnectionInterceptor>();
+
 var app = builder.Build();
 
 using (var serviceScope = app.Services.CreateScope())
@@ -80,6 +116,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
 public partial class Program
 {
 }
