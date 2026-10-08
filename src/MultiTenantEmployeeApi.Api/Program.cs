@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Features.Employees.Create;
+using MultiTenantEmployeeApi.Api.Common.CustomData;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +54,9 @@ builder.Services.AddMediatR(
 builder.Services.AddValidatorsFromAssemblyContaining<
     CreateEmployeeValidator>();
 
+builder.Services.AddSingleton<
+    ICustomDataValidator,
+    CustomDataValidator>();
 var app = builder.Build();
 
 using (var serviceScope = app.Services.CreateScope())

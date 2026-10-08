@@ -1,11 +1,16 @@
 using FluentValidation;
+using MultiTenantEmployeeApi.Api.Common.CustomData;
+using MultiTenantEmployeeApi.Api.Common.Tenancy;
+using MultiTenantEmployeeApi.Api.Entities;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.Create;
 
 public sealed class CreateEmployeeValidator
     : AbstractValidator<CreateEmployeeCommand>
 {
-    public CreateEmployeeValidator()
+    public CreateEmployeeValidator(
+        ICustomDataValidator customDataValidator,
+        ITenantContext tenantContext)
     {
         RuleFor(command => command.FirstName)
             .NotEmpty();
@@ -22,20 +27,41 @@ public sealed class CreateEmployeeValidator
 
         RuleFor(command => command.Status)
             .NotEmpty()
-            .Must(IsSupportedStatus)
-            .WithMessage("Status must be 'active' or 'suspended'.");
+            .Must(BeValidEmployeeStatus)
+            .WithMessage(
+                "Status must be either 'active' or 'suspended'.");
+
+        RuleFor(command => command.CustomData)
+            .Custom(
+                (customData, validationContext) =>
+                {
+                    var currentTenantId =
+                        tenantContext.TenantId;
+
+                    var validationErrors =
+                        customDataValidator.Validate(
+                            currentTenantId,
+                            customData);
+
+                    foreach (var validationError in validationErrors)
+                    {
+                        validationContext.AddFailure(
+                            nameof(CreateEmployeeCommand.CustomData),
+                            validationError);
+                    }
+                });
     }
 
-    private static bool IsSupportedStatus(string status)
+    private static bool BeValidEmployeeStatus(
+        string status)
     {
-        return string.Equals(
+        return Enum.TryParse<EmployeeStatus>(
                    status,
-                   "active",
-                   StringComparison.OrdinalIgnoreCase)
-               ||
-               string.Equals(
-                   status,
-                   "suspended",
-                   StringComparison.OrdinalIgnoreCase);
+                   ignoreCase: true,
+                   out var parsedStatus)
+               &&
+               parsedStatus is
+                   EmployeeStatus.Active or
+                   EmployeeStatus.Suspended;
     }
 }

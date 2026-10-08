@@ -60,7 +60,9 @@ public sealed class CreateEmployeeIntegrationTests
             status = "active",
             customData = new
             {
-                level = "senior"
+                jobLevel = "Senior",
+                officeLocation = "Alexandria",
+                yearsExperience = 5
             }
         };
 
