@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using MultiTenantEmployeeApi.Api.Data;
+using MultiTenantEmployeeApi.Api.Data.Interceptors;
 
 namespace MultiTenantEmployeeApi.IntegrationTests.Infrastructure;
 
@@ -15,7 +16,8 @@ public sealed class PostgreSqlWebApplicationFactory
     public PostgreSqlWebApplicationFactory(
         string postgresConnectionString)
     {
-        _postgresConnectionString = postgresConnectionString;
+        _postgresConnectionString =
+            postgresConnectionString;
     }
 
     protected override void ConfigureWebHost(
@@ -27,15 +29,25 @@ public sealed class PostgreSqlWebApplicationFactory
                 .SingleOrDefault(serviceDescriptor =>
                     serviceDescriptor.ServiceType ==
                     typeof(
-                        IDbContextOptionsConfiguration<EmployeeDbContext>));
+                        IDbContextOptionsConfiguration<
+                            EmployeeDbContext>));
 
             if (dbContextConfiguration is not null)
             {
-                services.Remove(dbContextConfiguration);
+                services.Remove(
+                    dbContextConfiguration);
             }
 
-            services.AddDbContext<EmployeeDbContext>(options =>
-                options.UseNpgsql(_postgresConnectionString));
+            services.AddDbContext<EmployeeDbContext>(
+                (serviceProvider, options) =>
+                {
+                    options.UseNpgsql(
+                        _postgresConnectionString);
+
+                    options.AddInterceptors(
+                        serviceProvider.GetRequiredService<
+                            TenantSessionConnectionInterceptor>());
+                });
         });
     }
 }

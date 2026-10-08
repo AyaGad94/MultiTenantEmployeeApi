@@ -4,6 +4,7 @@ using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Features.Employees.Create;
 using MultiTenantEmployeeApi.Api.Common.CustomData;
+using MultiTenantEmployeeApi.Api.Data.Interceptors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ builder.Services.AddDbContext<EmployeeDbContext>(
                 "Connection string 'Postgres' is not configured.");
 
         options.UseNpgsql(postgresConnectionString);
+        options.AddInterceptors(
+            serviceProvider.GetRequiredService<
+                TenantSessionConnectionInterceptor>());
     });
 
 builder.Services
@@ -57,6 +61,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<
 builder.Services.AddSingleton<
     ICustomDataValidator,
     CustomDataValidator>();
+builder.Services.AddScoped<
+    TenantSessionConnectionInterceptor>();
 var app = builder.Build();
 
 using (var serviceScope = app.Services.CreateScope())

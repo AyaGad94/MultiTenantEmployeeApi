@@ -9,7 +9,21 @@ public sealed class TenantContext : ITenantContext
         ?? throw new InvalidOperationException(
             "The tenant has not been resolved for the current request.");
 
-    public void SetTenantId(Guid tenantId)
+    public bool TryGetTenantId(
+        out Guid tenantId)
+    {
+        if (_tenantId.HasValue)
+        {
+            tenantId = _tenantId.Value;
+            return true;
+        }
+
+        tenantId = Guid.Empty;
+        return false;
+    }
+
+    public void SetTenantId(
+        Guid tenantId)
     {
         if (tenantId == Guid.Empty)
         {
@@ -21,7 +35,7 @@ public sealed class TenantContext : ITenantContext
         if (_tenantId.HasValue)
         {
             throw new InvalidOperationException(
-                "The tenant has already been resolved for the current request.");
+                "The tenant has already been resolved for this request.");
         }
 
         _tenantId = tenantId;
