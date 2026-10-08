@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
+using MultiTenantEmployeeApi.Api.Entities.Audit;
 using MultiTenantEmployeeApi.Api.Features.Employees.Create;
 
 namespace MultiTenantEmployeeApi.UnitTests.Features.Employees.Create;
@@ -71,6 +72,25 @@ public sealed class CreateEmployeeCommandHandlerTests
             createdEmployee.Status);
 
         Assert.Null(createdEmployee.DeletedAt);
+
+        var auditLog = await dbContext.AuditLogs
+            .SingleAsync();
+
+        Assert.Equal(
+            TenantAId,
+            auditLog.TenantId);
+
+        Assert.Equal(
+            createdEmployee.Id,
+            auditLog.EmployeeId);
+
+        Assert.Equal(
+            AuditAction.Created,
+            auditLog.Action);
+
+        Assert.Equal(
+            createdEmployee.CreatedAt,
+            auditLog.OccurredAt);
     }
 
     [Fact]
@@ -123,6 +143,13 @@ public sealed class CreateEmployeeCommandHandlerTests
         Assert.Equal(
             1,
             employeeCount);
+
+        var auditLogCount =
+            await dbContext.AuditLogs.CountAsync();
+
+        Assert.Equal(
+            0,
+            auditLogCount);
     }
 
     private static EmployeeDbContext CreateDbContext(

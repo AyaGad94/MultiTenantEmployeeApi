@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
+using MultiTenantEmployeeApi.Api.Entities.Audit;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.Create;
 
@@ -72,7 +73,17 @@ public sealed class CreateEmployeeCommandHandler
                 DeletedAt = null
             };
 
+            var auditLog = new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                TenantId = currentTenantId,
+                EmployeeId = employee.Id,
+                Action = AuditAction.Created,
+                OccurredAt = currentUtcTime
+            };
+
             _dbContext.Employees.Add(employee);
+            _dbContext.AuditLogs.Add(auditLog);
 
             await _dbContext.SaveChangesAsync(
                 cancellationToken);

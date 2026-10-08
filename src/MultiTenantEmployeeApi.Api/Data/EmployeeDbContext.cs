@@ -1,26 +1,7 @@
-// using Microsoft.EntityFrameworkCore;
-// using MultiTenantEmployeeApi.Api.Entities;
-
-// namespace MultiTenantEmployeeApi.Api.Data;
-
-// public sealed class EmployeeDbContext : DbContext
-// {
-//     public EmployeeDbContext(DbContextOptions<EmployeeDbContext> options)
-//         : base(options)
-//     {
-//     }
-
-//     public DbSet<Employee> Employees => Set<Employee>();
-
-//     protected override void OnModelCreating(ModelBuilder modelBuilder)
-//     {
-//         modelBuilder.ApplyConfigurationsFromAssembly(
-//             typeof(EmployeeDbContext).Assembly);
-//     }
-// }
 using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Entities;
+using MultiTenantEmployeeApi.Api.Entities.Audit;
 
 namespace MultiTenantEmployeeApi.Api.Data;
 
@@ -37,7 +18,7 @@ public sealed class EmployeeDbContext : DbContext
     }
 
     public DbSet<Employee> Employees => Set<Employee>();
-
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     private Guid CurrentTenantId => _tenantContext.TenantId;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
