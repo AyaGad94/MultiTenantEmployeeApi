@@ -1,8 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Responses;
-using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
+using MultiTenantEmployeeApi.Api.Common.Money;
+using MultiTenantEmployeeApi.Api.Data;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.List;
 
@@ -73,7 +74,16 @@ public sealed class ListEmployeesQueryHandler
                     Status =
                         employee.Status == EmployeeStatus.Active
                             ? "active"
-                            : "suspended"
+                            : "suspended",
+                    Salary = employee.Salary == null
+                        ? null
+                        : new SalaryResponse
+                        {
+                            AmountMinor =
+                                employee.Salary.AmountMinor,
+                            CurrencyCode =
+                                employee.Salary.CurrencyCode
+                        }
                 })
                 .ToListAsync(cancellationToken);
         }

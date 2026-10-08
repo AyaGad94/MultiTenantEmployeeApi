@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MultiTenantEmployeeApi.Api.Common.Money;
 using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
@@ -15,7 +16,8 @@ public sealed class CreateEmployeeCommandHandlerTests
     [Fact]
     public async Task Handle_CreatesEmployeeForCurrentTenant_WhenRequestIsValid()
     {
-        var tenantContext = CreateTenantContext(TenantAId);
+        var tenantContext =
+            CreateTenantContext(TenantAId);
 
         await using var dbContext =
             CreateDbContext(tenantContext);
@@ -30,7 +32,12 @@ public sealed class CreateEmployeeCommandHandlerTests
             LastName = "Gad",
             Email = "Aya.Gad@Example.com",
             Department = "Engineering",
-            Status = "active"
+            Status = "active",
+            Salary = new SalaryInput
+            {
+                AmountMinor = 250000,
+                CurrencyCode = "egp"
+            }
         };
 
         var createResult = await handler.Handle(
@@ -91,12 +98,24 @@ public sealed class CreateEmployeeCommandHandlerTests
         Assert.Equal(
             createdEmployee.CreatedAt,
             auditLog.OccurredAt);
+
+        Assert.NotNull(
+            createdEmployee.Salary);
+
+        Assert.Equal(
+            250000,
+            createdEmployee.Salary.AmountMinor);
+
+        Assert.Equal(
+            "EGP",
+            createdEmployee.Salary.CurrencyCode);
     }
 
     [Fact]
     public async Task Handle_ReturnsDuplicateEmail_WhenEmailAlreadyExistsForCurrentTenant()
     {
-        var tenantContext = CreateTenantContext(TenantAId);
+        var tenantContext =
+            CreateTenantContext(TenantAId);
 
         await using var dbContext =
             CreateDbContext(tenantContext);
@@ -165,7 +184,8 @@ public sealed class CreateEmployeeCommandHandlerTests
             tenantContext);
     }
 
-    private static TenantContext CreateTenantContext(Guid tenantId)
+    private static TenantContext CreateTenantContext(
+        Guid tenantId)
     {
         var tenantContext = new TenantContext();
 

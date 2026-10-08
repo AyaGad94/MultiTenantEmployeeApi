@@ -5,6 +5,7 @@ using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 using MultiTenantEmployeeApi.Api.Entities.Audit;
+using MultiTenantEmployeeApi.Api.ValueObjects;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.Create;
 
@@ -56,6 +57,15 @@ public sealed class CreateEmployeeCommandHandler
                 command.CustomData.Value.GetRawText());
         }
 
+        Money? salary = null;
+
+        if (command.Salary is not null)
+        {
+            salary = new Money(
+                command.Salary.AmountMinor,
+                command.Salary.CurrencyCode);
+        }
+
         try
         {
             var employee = new Employee
@@ -68,6 +78,7 @@ public sealed class CreateEmployeeCommandHandler
                 Department = command.Department.Trim(),
                 Status = employeeStatus,
                 CustomData = customDataDocument,
+                Salary = salary,
                 CreatedAt = currentUtcTime,
                 UpdatedAt = currentUtcTime,
                 DeletedAt = null

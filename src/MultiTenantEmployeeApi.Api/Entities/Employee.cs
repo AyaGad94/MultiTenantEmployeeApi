@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MultiTenantEmployeeApi.Api.ValueObjects;
 
 namespace MultiTenantEmployeeApi.Api.Entities;
 
@@ -25,4 +26,5 @@ public sealed class Employee
     public DateTimeOffset UpdatedAt { get; set; }
 
     public DateTimeOffset? DeletedAt { get; set; }
+    public Money? Salary { get; set; }
 }

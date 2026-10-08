@@ -162,7 +162,8 @@ public sealed class EmployeesController : ControllerBase
             Email = request.Email,
             Department = request.Department,
             Status = request.Status,
-            CustomData = request.CustomData
+            CustomData = request.CustomData,
+            Salary = request.Salary
         };
 
         var validationResult =

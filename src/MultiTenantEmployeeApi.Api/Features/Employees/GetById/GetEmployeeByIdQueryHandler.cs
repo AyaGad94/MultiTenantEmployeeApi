@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using MultiTenantEmployeeApi.Api.Common.Money;
 using MultiTenantEmployeeApi.Api.Data;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.GetById;
@@ -36,6 +37,15 @@ public sealed class GetEmployeeByIdQueryHandler
                         ? "active"
                         : "suspended",
                 CustomData = employee.CustomData,
+                Salary = employee.Salary == null
+                    ? null
+                    : new SalaryResponse
+                    {
+                        AmountMinor =
+                            employee.Salary.AmountMinor,
+                        CurrencyCode =
+                            employee.Salary.CurrencyCode
+                    },
                 CreatedAt = employee.CreatedAt,
                 UpdatedAt = employee.UpdatedAt
             })

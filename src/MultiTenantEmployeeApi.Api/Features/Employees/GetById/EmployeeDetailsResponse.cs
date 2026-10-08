@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MultiTenantEmployeeApi.Api.Common.Money;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.GetById;
 
@@ -17,6 +18,8 @@ public sealed class EmployeeDetailsResponse
     public string Status { get; init; } = string.Empty;
 
     public JsonDocument? CustomData { get; init; }
+
+    public SalaryResponse? Salary { get; init; }
 
     public DateTimeOffset CreatedAt { get; init; }
 

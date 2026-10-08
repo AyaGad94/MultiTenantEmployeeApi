@@ -5,6 +5,7 @@ using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 using MultiTenantEmployeeApi.Api.Entities.Audit;
+using MultiTenantEmployeeApi.Api.ValueObjects;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.Update;
 
@@ -72,6 +73,15 @@ public sealed class UpdateEmployeeCommandHandler
                 command.CustomData.Value.GetRawText());
         }
 
+        Money? salary = null;
+
+        if (command.Salary is not null)
+        {
+            salary = new Money(
+                command.Salary.AmountMinor,
+                command.Salary.CurrencyCode);
+        }
+
         var previousCustomData = employee.CustomData;
 
         try
@@ -85,6 +95,7 @@ public sealed class UpdateEmployeeCommandHandler
             employee.Department = command.Department.Trim();
             employee.Status = employeeStatus;
             employee.CustomData = updatedCustomData;
+            employee.Salary = salary;
             employee.UpdatedAt = currentUtcTime;
 
             var auditLog = new AuditLog

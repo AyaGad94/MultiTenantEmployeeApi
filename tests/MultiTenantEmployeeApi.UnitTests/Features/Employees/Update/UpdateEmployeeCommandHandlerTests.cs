@@ -4,6 +4,8 @@ using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 using MultiTenantEmployeeApi.Api.Entities.Audit;
 using MultiTenantEmployeeApi.Api.Features.Employees.Update;
+using MultiTenantEmployeeApi.Api.Common.Money;
+using MultiTenantEmployeeApi.Api.ValueObjects;
 
 namespace MultiTenantEmployeeApi.UnitTests.Features.Employees.Update;
 
@@ -32,7 +34,10 @@ public sealed class UpdateEmployeeCommandHandlerTests
             Status = EmployeeStatus.Active,
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
             UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            DeletedAt = null
+            DeletedAt = null,
+            Salary = new Money(
+                200000,
+                "EGP"),
         };
 
         dbContext.Employees.Add(employee);
@@ -51,7 +56,12 @@ public sealed class UpdateEmployeeCommandHandlerTests
             LastName = "Updated",
             Email = "Aya.Updated@Example.com",
             Department = "Platform Engineering",
-            Status = "suspended"
+            Status = "suspended",
+            Salary = new SalaryInput
+            {
+                AmountMinor = 300000,
+                CurrencyCode = "usd"
+            }
         };
 
         var updateResult = await handler.Handle(
@@ -101,6 +111,17 @@ public sealed class UpdateEmployeeCommandHandlerTests
         Assert.Equal(
             updatedEmployee.UpdatedAt,
             auditLog.OccurredAt);
+
+        Assert.NotNull(
+            updatedEmployee.Salary);
+
+        Assert.Equal(
+            300000,
+            updatedEmployee.Salary.AmountMinor);
+
+        Assert.Equal(
+            "USD",
+            updatedEmployee.Salary.CurrencyCode);
     }
 
     private static EmployeeDbContext CreateDbContext(

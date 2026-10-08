@@ -66,6 +66,18 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
                         storedJson,
                         default(JsonDocumentOptions)));
 
+        builder.OwnsOne(
+            employee => employee.Salary,
+            salaryBuilder =>
+            {
+                salaryBuilder.Property(salary => salary.AmountMinor)
+                    .HasColumnName("amount_minor")
+                    .HasColumnType("integer");
+
+                salaryBuilder.Property(salary => salary.CurrencyCode)
+                    .HasColumnName("currency_code");
+            });
+
         builder.Property(employee => employee.CreatedAt)
             .HasColumnName("created_at")
             .HasColumnType("timestamp with time zone")

@@ -50,6 +50,23 @@ public sealed class CreateEmployeeValidator
                             validationError);
                     }
                 });
+
+        When(
+            command => command.Salary is not null,
+            () =>
+            {
+                RuleFor(command =>
+                        command.Salary!.AmountMinor)
+                    .GreaterThanOrEqualTo(0)
+                    .WithMessage(
+                        "Salary amountMinor cannot be negative.");
+
+                RuleFor(command =>
+                        command.Salary!.CurrencyCode)
+                    .NotEmpty()
+                    .WithMessage(
+                        "Salary currencyCode is required.");
+            });
     }
 
     private static bool BeValidEmployeeStatus(
