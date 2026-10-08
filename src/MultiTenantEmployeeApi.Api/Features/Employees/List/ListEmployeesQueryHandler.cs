@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MultiTenantEmployeeApi.Api.Common.Responses;
-using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 
@@ -11,27 +10,19 @@ public sealed class ListEmployeesQueryHandler
     : IRequestHandler<ListEmployeesQuery, ListEmployeesResult>
 {
     private readonly EmployeeDbContext _dbContext;
-    private readonly ITenantContext _tenantContext;
 
     public ListEmployeesQueryHandler(
-        EmployeeDbContext dbContext,
-        ITenantContext tenantContext)
+        EmployeeDbContext dbContext)
     {
         _dbContext = dbContext;
-        _tenantContext = tenantContext;
     }
 
     public async Task<ListEmployeesResult> Handle(
         ListEmployeesQuery query,
         CancellationToken cancellationToken)
     {
-        var currentTenantId = _tenantContext.TenantId;
-
         var employeeQuery = _dbContext.Employees
-            .AsNoTracking()
-            .Where(employee =>
-                employee.TenantId == currentTenantId &&
-                employee.DeletedAt == null);
+            .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(query.Department))
         {

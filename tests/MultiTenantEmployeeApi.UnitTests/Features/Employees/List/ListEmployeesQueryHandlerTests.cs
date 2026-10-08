@@ -14,7 +14,10 @@ public sealed class ListEmployeesQueryHandlerTests
     [Fact]
     public async Task Handle_ReturnsRequestedPageWithPaginationMetadata()
     {
-        await using var dbContext = CreateDbContext();
+        var tenantContext = CreateTenantContext(TenantAId);
+
+        await using var dbContext =
+            CreateDbContext(tenantContext);
 
         var firstCreatedAt =
             new DateTimeOffset(
@@ -50,11 +53,8 @@ public sealed class ListEmployeesQueryHandlerTests
 
         await dbContext.SaveChangesAsync();
 
-        var tenantContext = CreateTenantContext(TenantAId);
-
         var handler = new ListEmployeesQueryHandler(
-            dbContext,
-            tenantContext);
+            dbContext);
 
         var query = new ListEmployeesQuery
         {
@@ -82,14 +82,17 @@ public sealed class ListEmployeesQueryHandlerTests
         Assert.Equal(3, listResult.Pagination.TotalPages);
     }
 
-    private static EmployeeDbContext CreateDbContext()
+    private static EmployeeDbContext CreateDbContext(
+        ITenantContext tenantContext)
     {
         var options =
             new DbContextOptionsBuilder<EmployeeDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
-        return new EmployeeDbContext(options);
+        return new EmployeeDbContext(
+            options,
+            tenantContext);
     }
 
     private static TenantContext CreateTenantContext(Guid tenantId)

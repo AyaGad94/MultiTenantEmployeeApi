@@ -26,12 +26,13 @@ public sealed class CreateEmployeeCommandHandler
         CancellationToken cancellationToken)
     {
         var currentTenantId = _tenantContext.TenantId;
-        var normalizedEmail = command.Email.Trim().ToLowerInvariant();
+
+        var normalizedEmail =
+            command.Email.Trim().ToLowerInvariant();
 
         var emailAlreadyExists = await _dbContext.Employees
             .AnyAsync(
                 employee =>
-                    employee.TenantId == currentTenantId &&
                     employee.Email == normalizedEmail,
                 cancellationToken);
 
@@ -73,9 +74,11 @@ public sealed class CreateEmployeeCommandHandler
 
             _dbContext.Employees.Add(employee);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.SaveChangesAsync(
+                cancellationToken);
 
-            return CreateEmployeeResult.Created(employee.Id);
+            return CreateEmployeeResult.Created(
+                employee.Id);
         }
         finally
         {

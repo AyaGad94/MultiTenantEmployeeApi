@@ -14,9 +14,10 @@ public sealed class CreateEmployeeCommandHandlerTests
     [Fact]
     public async Task Handle_CreatesEmployeeForCurrentTenant_WhenRequestIsValid()
     {
-        await using var dbContext = CreateDbContext();
-
         var tenantContext = CreateTenantContext(TenantAId);
+
+        await using var dbContext =
+            CreateDbContext(tenantContext);
 
         var handler = new CreateEmployeeCommandHandler(
             dbContext,
@@ -41,20 +42,44 @@ public sealed class CreateEmployeeCommandHandlerTests
         var createdEmployee = await dbContext.Employees
             .SingleAsync();
 
-        Assert.Equal(createResult.EmployeeId, createdEmployee.Id);
-        Assert.Equal(TenantAId, createdEmployee.TenantId);
-        Assert.Equal("Aya", createdEmployee.FirstName);
-        Assert.Equal("Gad", createdEmployee.LastName);
-        Assert.Equal("aya.gad@example.com", createdEmployee.Email);
-        Assert.Equal("Engineering", createdEmployee.Department);
-        Assert.Equal(EmployeeStatus.Active, createdEmployee.Status);
+        Assert.Equal(
+            createResult.EmployeeId,
+            createdEmployee.Id);
+
+        Assert.Equal(
+            TenantAId,
+            createdEmployee.TenantId);
+
+        Assert.Equal(
+            "Aya",
+            createdEmployee.FirstName);
+
+        Assert.Equal(
+            "Gad",
+            createdEmployee.LastName);
+
+        Assert.Equal(
+            "aya.gad@example.com",
+            createdEmployee.Email);
+
+        Assert.Equal(
+            "Engineering",
+            createdEmployee.Department);
+
+        Assert.Equal(
+            EmployeeStatus.Active,
+            createdEmployee.Status);
+
         Assert.Null(createdEmployee.DeletedAt);
     }
 
     [Fact]
     public async Task Handle_ReturnsDuplicateEmail_WhenEmailAlreadyExistsForCurrentTenant()
     {
-        await using var dbContext = CreateDbContext();
+        var tenantContext = CreateTenantContext(TenantAId);
+
+        await using var dbContext =
+            CreateDbContext(tenantContext);
 
         dbContext.Employees.Add(
             new Employee
@@ -71,8 +96,6 @@ public sealed class CreateEmployeeCommandHandlerTests
             });
 
         await dbContext.SaveChangesAsync();
-
-        var tenantContext = CreateTenantContext(TenantAId);
 
         var handler = new CreateEmployeeCommandHandler(
             dbContext,
@@ -94,18 +117,25 @@ public sealed class CreateEmployeeCommandHandlerTests
         Assert.True(createResult.EmailAlreadyExists);
         Assert.Null(createResult.EmployeeId);
 
-        var employeeCount = await dbContext.Employees.CountAsync();
+        var employeeCount =
+            await dbContext.Employees.CountAsync();
 
-        Assert.Equal(1, employeeCount);
+        Assert.Equal(
+            1,
+            employeeCount);
     }
 
-    private static EmployeeDbContext CreateDbContext()
+    private static EmployeeDbContext CreateDbContext(
+        ITenantContext tenantContext)
     {
-        var options = new DbContextOptionsBuilder<EmployeeDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
+        var options =
+            new DbContextOptionsBuilder<EmployeeDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options;
 
-        return new EmployeeDbContext(options);
+        return new EmployeeDbContext(
+            options,
+            tenantContext);
     }
 
     private static TenantContext CreateTenantContext(Guid tenantId)

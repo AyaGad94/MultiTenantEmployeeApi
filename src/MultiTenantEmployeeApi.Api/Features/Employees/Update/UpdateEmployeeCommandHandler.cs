@@ -1,7 +1,6 @@
 using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 
@@ -11,28 +10,21 @@ public sealed class UpdateEmployeeCommandHandler
     : IRequestHandler<UpdateEmployeeCommand, UpdateEmployeeResult>
 {
     private readonly EmployeeDbContext _dbContext;
-    private readonly ITenantContext _tenantContext;
 
     public UpdateEmployeeCommandHandler(
-        EmployeeDbContext dbContext,
-        ITenantContext tenantContext)
+        EmployeeDbContext dbContext)
     {
         _dbContext = dbContext;
-        _tenantContext = tenantContext;
     }
 
     public async Task<UpdateEmployeeResult> Handle(
         UpdateEmployeeCommand command,
         CancellationToken cancellationToken)
     {
-        var currentTenantId = _tenantContext.TenantId;
-
         var employee = await _dbContext.Employees
             .FirstOrDefaultAsync(
                 currentEmployee =>
-                    currentEmployee.Id == command.EmployeeId &&
-                    currentEmployee.TenantId == currentTenantId &&
-                    currentEmployee.DeletedAt == null,
+                    currentEmployee.Id == command.EmployeeId,
                 cancellationToken);
 
         if (employee is null)
@@ -52,9 +44,7 @@ public sealed class UpdateEmployeeCommandHandler
                 .AnyAsync(
                     otherEmployee =>
                         otherEmployee.Id != employee.Id &&
-                        otherEmployee.TenantId == currentTenantId &&
-                        otherEmployee.Email == normalizedEmail &&
-                        otherEmployee.DeletedAt == null,
+                        otherEmployee.Email == normalizedEmail,
                     cancellationToken);
 
             if (emailAlreadyExists)
@@ -90,7 +80,8 @@ public sealed class UpdateEmployeeCommandHandler
             await _dbContext.SaveChangesAsync(
                 cancellationToken);
 
-            return UpdateEmployeeResult.Updated(employee.Id);
+            return UpdateEmployeeResult.Updated(
+                employee.Id);
         }
         finally
         {

@@ -6,6 +6,7 @@ using MultiTenantEmployeeApi.Api.Data;
 using MultiTenantEmployeeApi.Api.Entities;
 using MultiTenantEmployeeApi.IntegrationTests.Infrastructure;
 using Testcontainers.PostgreSql;
+using MultiTenantEmployeeApi.Api.Common.Tenancy;
 
 namespace MultiTenantEmployeeApi.IntegrationTests.Features.Employees;
 
@@ -83,13 +84,17 @@ public sealed class CreateEmployeeIntegrationTests
         using var serviceScope =
             _applicationFactory!.Services.CreateScope();
 
+        var tenantContext = serviceScope.ServiceProvider
+            .GetRequiredService<TenantContext>();
+
+        tenantContext.SetTenantId(TenantAId);
+
         var dbContext = serviceScope.ServiceProvider
             .GetRequiredService<EmployeeDbContext>();
 
         var createdEmployee = await dbContext.Employees
             .AsNoTracking()
             .SingleAsync(employee =>
-                employee.TenantId == TenantAId &&
                 employee.Email ==
                 "integration.employee@example.com");
 

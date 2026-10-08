@@ -18,7 +18,10 @@ public sealed class TenantIsolationTests
     [Fact]
     public async Task ListEmployees_ReturnsOnlyEmployeesFromCurrentTenant()
     {
-        await using var dbContext = CreateDbContext();
+        var tenantContext = CreateTenantContext(TenantAId);
+
+        await using var dbContext =
+            CreateDbContext(tenantContext);
 
         dbContext.Employees.AddRange(
             CreateEmployee(
@@ -30,11 +33,8 @@ public sealed class TenantIsolationTests
 
         await dbContext.SaveChangesAsync();
 
-        var tenantContext = CreateTenantContext(TenantAId);
-
         var handler = new ListEmployeesQueryHandler(
-            dbContext,
-            tenantContext);
+            dbContext);
 
         var query = new ListEmployeesQuery
         {
@@ -47,6 +47,7 @@ public sealed class TenantIsolationTests
             CancellationToken.None);
 
         Assert.Single(listResult.Employees);
+
         Assert.Equal(
             "tenant-a@example.com",
             listResult.Employees[0].Email);
@@ -59,7 +60,10 @@ public sealed class TenantIsolationTests
     [Fact]
     public async Task GetEmployeeById_ReturnsNull_WhenEmployeeBelongsToAnotherTenant()
     {
-        await using var dbContext = CreateDbContext();
+        var tenantContext = CreateTenantContext(TenantAId);
+
+        await using var dbContext =
+            CreateDbContext(tenantContext);
 
         var tenantBEmployee = CreateEmployee(
             tenantId: TenantBId,
@@ -69,11 +73,8 @@ public sealed class TenantIsolationTests
 
         await dbContext.SaveChangesAsync();
 
-        var tenantContext = CreateTenantContext(TenantAId);
-
         var handler = new GetEmployeeByIdQueryHandler(
-            dbContext,
-            tenantContext);
+            dbContext);
 
         var query =
             new GetEmployeeByIdQuery(
@@ -106,14 +107,17 @@ public sealed class TenantIsolationTests
         };
     }
 
-    private static EmployeeDbContext CreateDbContext()
+    private static EmployeeDbContext CreateDbContext(
+        ITenantContext tenantContext)
     {
         var options =
             new DbContextOptionsBuilder<EmployeeDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
-        return new EmployeeDbContext(options);
+        return new EmployeeDbContext(
+            options,
+            tenantContext);
     }
 
     private static TenantContext CreateTenantContext(
@@ -124,5 +128,41 @@ public sealed class TenantIsolationTests
         tenantContext.SetTenantId(tenantId);
 
         return tenantContext;
+    }
+
+    [Fact]
+    public async Task GlobalQueryFilter_ExcludesSoftDeletedEmployees()
+    {
+        var tenantContext = CreateTenantContext(TenantAId);
+
+        await using var dbContext =
+            CreateDbContext(tenantContext);
+
+        var activeEmployee = CreateEmployee(
+            tenantId: TenantAId,
+            email: "active@example.com");
+
+        var deletedEmployee = CreateEmployee(
+            tenantId: TenantAId,
+            email: "deleted@example.com");
+
+        deletedEmployee.DeletedAt =
+            DateTimeOffset.UtcNow;
+
+        dbContext.Employees.AddRange(
+            activeEmployee,
+            deletedEmployee);
+
+        await dbContext.SaveChangesAsync();
+
+        var visibleEmployees = await dbContext.Employees
+            .AsNoTracking()
+            .ToListAsync();
+
+        Assert.Single(visibleEmployees);
+
+        Assert.Equal(
+            "active@example.com",
+            visibleEmployees[0].Email);
     }
 }

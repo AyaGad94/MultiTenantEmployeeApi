@@ -1,8 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using MultiTenantEmployeeApi.Api.Common.Tenancy;
 using MultiTenantEmployeeApi.Api.Data;
-using MultiTenantEmployeeApi.Api.Entities;
 
 namespace MultiTenantEmployeeApi.Api.Features.Employees.GetById;
 
@@ -10,28 +8,21 @@ public sealed class GetEmployeeByIdQueryHandler
     : IRequestHandler<GetEmployeeByIdQuery, EmployeeDetailsResponse?>
 {
     private readonly EmployeeDbContext _dbContext;
-    private readonly ITenantContext _tenantContext;
 
     public GetEmployeeByIdQueryHandler(
-        EmployeeDbContext dbContext,
-        ITenantContext tenantContext)
+        EmployeeDbContext dbContext)
     {
         _dbContext = dbContext;
-        _tenantContext = tenantContext;
     }
 
     public async Task<EmployeeDetailsResponse?> Handle(
         GetEmployeeByIdQuery query,
         CancellationToken cancellationToken)
     {
-        var currentTenantId = _tenantContext.TenantId;
-
         return await _dbContext.Employees
             .AsNoTracking()
             .Where(employee =>
-                employee.Id == query.EmployeeId &&
-                employee.TenantId == currentTenantId &&
-                employee.DeletedAt == null)
+                employee.Id == query.EmployeeId)
             .Select(employee => new EmployeeDetailsResponse
             {
                 Id = employee.Id,
@@ -40,7 +31,8 @@ public sealed class GetEmployeeByIdQueryHandler
                 Email = employee.Email,
                 Department = employee.Department,
                 Status =
-                    employee.Status == EmployeeStatus.Active
+                    employee.Status ==
+                    Entities.EmployeeStatus.Active
                         ? "active"
                         : "suspended",
                 CustomData = employee.CustomData,
